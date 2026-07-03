@@ -20,7 +20,7 @@ import { Tip } from '@/components/ui/tooltip'
 import { getSessionMessages, listAllProfileSessions } from '@/hermes'
 import { type Translations, useI18n } from '@/i18n'
 import { ExternalLink, ExternalLinkIcon, hostPathLabel, urlSlugTitleLabel, useLinkTitle } from '@/lib/external-link'
-import { FileImage, FileText, FolderOpen, Link2 } from '@/lib/icons'
+import { FileImage, FileText, FolderOpen, Link2, Loader2, RefreshCw } from '@/lib/icons'
 import { normalize } from '@/lib/text'
 import { fmtDayTime } from '@/lib/time'
 import { cn } from '@/lib/utils'
@@ -114,7 +114,11 @@ export function ArtifactsView({ setStatusbarItemGroup: _setStatusbarItemGroup, .
   const [imagePage, setImagePage] = useState(1)
   const [filePage, setFilePage] = useState(1)
 
+  const [refreshing, setRefreshing] = useState(false)
+
   const refreshArtifacts = useCallback(async () => {
+    setRefreshing(true)
+
     try {
       const sessions = (await listAllProfileSessions(30, 1)).sessions
       const results = await Promise.allSettled(sessions.map(session => getSessionMessages(session.id, session.profile)))
@@ -133,6 +137,8 @@ export function ArtifactsView({ setStatusbarItemGroup: _setStatusbarItemGroup, .
     } catch (err) {
       notifyError(err, a.failedLoad)
       setArtifacts([])
+    } finally {
+      setRefreshing(false)
     }
   }, [a])
 
@@ -265,6 +271,20 @@ export function ArtifactsView({ setStatusbarItemGroup: _setStatusbarItemGroup, .
       searchHidden={counts.all === 0}
       searchHints={searchHints}
       searchPlaceholder={a.search}
+      searchTrailingAction={
+        <Tip label={refreshing ? a.refreshing : a.refresh}>
+          <Button
+            aria-label={refreshing ? a.refreshing : a.refresh}
+            className="text-(--ui-text-tertiary) hover:bg-(--chrome-action-hover) hover:text-foreground"
+            disabled={refreshing}
+            onClick={() => void refreshArtifacts()}
+            size="icon-titlebar"
+            variant="ghost"
+          >
+            {refreshing ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+          </Button>
+        </Tip>
+      }
       searchValue={query}
       tabs={[
         { id: 'all', label: a.tabAll, meta: artifacts ? counts.all : null },
